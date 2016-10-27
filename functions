@@ -1,0 +1,143 @@
+import re
+import matplotlib as plt
+from tkinter.filedialog import askopenfilename
+from collections import Counter
+from collections import OrderedDict
+
+
+sat = []; sun =[]; mon = []; tue = []; wed = []; thu = []; fri = []; dates = []; comList = []; eduList = []
+userDict = {}
+
+
+def dataParsing():
+    global dates
+    datesList = []; usersList = []; pagesList = []; fileSizes = []
+    #working on hiding tkinter root menu, you can replace 'file' with the filepath if you prefer
+    #also comment out the line directly below this one!
+    file = askopenfilename()
+    with open(file, encoding="latin1") as dataFile:
+        dataList = [line.rstrip('\n') for line in dataFile]
+        datesList = isolateDates(dataList)
+        usersList = isolateUsers(dataList)
+        pagesList = isolatePages(dataList)
+        fileSizes = isolateFileSizes(dataList)
+        average(fileSizes)
+        topPages(pagesList)
+        
+def topPages(data):
+    pages = Counter(data).most_common(10)
+    print('The top 10 pages and their counts: ' + str(pages))
+        
+def average(data):
+    total = 0.0
+    for i in data:
+        total += float(i)
+    ave = total / len(data)
+    print("The average file size is: " + str(ave))
+        
+def isolateUsers(dataUser):
+    global userDict
+    userDict = {}
+    userInformation = []
+    for line in dataUser:
+        information = line.split(" ")
+        userInformation.append(information[0])
+    userDict = Counter(userInformation)
+    hitsPerClient = (len(userInformation)/len(userDict))
+    print("The number of distinct users: " + str(len(userDict)))
+    print("There are " + str(hitsPerClient) + " number of hits per client.")
+    urlUsers(userDict)
+    return userInformation
+               
+def isolateDates(dataDate):
+    global dates
+    dates = []
+    date = re.compile(r'\[\d+')
+    for line in dataDate:
+        item = date.findall(line)
+        if (len(item) == 1):
+            item = item[0]
+            dates.append(item.replace('[', ''))
+    sortDates(dates)
+    return dates
+    
+def sortDates(dates):
+    global fri; global thu; global wed; global tue; global mon; global sun; global sat
+    sat = []; sun =[]; mon = []; tue = []; wed = []; thu = []; fri = []
+    for item in dates:
+        day = int(item)
+        if((day%7) == 1):
+            sat.append(day)
+        elif((day%7) == 2):
+            sun.append(day)
+        elif((day%7) == 3):
+            mon.append(day)
+        elif((day%7) == 4):
+            tue.append(day)
+        elif((day%7) == 5):
+            wed.append(day)
+        elif((day%7) == 6):
+            thu.append(day)
+        else:
+            fri.append(day)
+    print("Here are the hits on a day-by-day basis: " + str(orderCounter(dates)))
+    print("There are " + str(len(sun)) + " hits on Sundays, " + str(len(mon)) + " hits on Mondays, " + str(len(tue))
+         + " hits on Tuesdays, " + str(len(wed)) + " hits on Wednesdays, " + str(len(thu)) + " hits on Thursdays, "
+         + str(len(fri)) + " hits on Fridays, and " + str(len(sat)) + " hits on Saturdays.")
+
+
+def urlUsers(data):
+    global comList; global eduList
+    com = re.compile(r'\w+.com')
+    edu = re.compile(r'\w+.edu')
+    comList = []
+    eduList = []
+    for key in data:
+        if(com.search(key)):
+            item = str(com.findall(key))
+            item = item.replace('[', '')
+            item = item.replace(']', '')
+            comList.append(item)
+        if(edu.search(key)):
+            item = str(edu.findall(key))
+            item = item.replace('[', '')
+            item = item.replace(']', '')
+            eduList.append(item)
+    print("The number of .com hits: " + str(len(comList)))
+    print("The number of .edu hits: " + str(len(eduList)))
+    
+def isolatePages(data):
+    fPath = re.compile(r'GET ([a-zA-Z0-9/.-]*)')
+    pages = []
+    for item in data:
+        if(fPath.search(item)):
+            item = str(fPath.findall(item))
+            item = item.replace('[', '')
+            item = item.replace(']', '')
+            pages.append(item)
+    return pages
+
+
+def isolateFileSizes(data):
+    fSize = re.compile(r'[0-9]{3} [0-9]+')
+    files = []
+    for item in data:
+        if(fSize.search(item)):
+            current = str(fSize.findall(item))
+            current = current.replace('[', '')
+            current = current.replace(']', '')
+            current = current.replace("'", "")
+            values = current.split(' ')
+            files.append(values[1])
+    return files
+    
+    
+#this transforms a list into an ordered dictionary
+def orderCounter(data):
+    counts = OrderedDict()
+    for obj in data:
+        try:
+            counts[obj] += 1
+        except KeyError:
+            counts[obj] = 1
+    return counts
